@@ -81,7 +81,7 @@
             border: 2px solid #f0f0f0;
             border-radius: 25px;
             padding: 20px;
-            margin-bottom: 20px;
+            margin-bottom: 10px;
             transition: 0.3s;
         }
 
@@ -99,6 +99,14 @@
             font-size: 16px;
             color: #444;
             background: transparent;
+        }
+
+        .char-count {
+            font-size: 11px;
+            color: #999;
+            text-align: right;
+            margin-bottom: 15px;
+            display: block;
         }
 
         /* বাটন ডিজাইন */
@@ -149,6 +157,7 @@
             font-size: 14px;
             font-weight: 600;
             min-height: 20px;
+            padding: 0 10px;
         }
 
         .footer-text {
@@ -168,27 +177,29 @@
 <body>
 
     <div class="chithi-card">
-        <!-- সাকসেস মেসেজ স্ক্রিন -->
+        <!-- Success Message Screen -->
         <div id="success-overlay">
             <div class="success-icon">✅</div>
-            <h2 style="color: #333; margin-bottom: 10px;">চিঠি পাঠানো হয়েছে!</h2>
-            <p style="color: #666; margin-bottom: 20px;">আপনার বেনামী চিঠিটি সফলভাবে পৌঁছে গেছে।</p>
-            <button class="send-btn" onclick="resetForm()" style="width: auto; padding: 12px 30px; font-size: 14px;">আরও একটি পাঠান</button>
+            <h2 style="color: #333; margin-bottom: 10px;">Chithi Pathano Hoyeche!</h2>
+            <p style="color: #666; margin-bottom: 20px;">Apnar anonymous chithi-ti pahuchiya deya hoyeche.</p>
+            <button class="send-btn" onclick="resetForm()" style="width: auto; padding: 12px 30px; font-size: 14px;">Ar-ekti Pathan</button>
         </div>
 
         <div id="main-content">
             <div class="avatar-container">
+                <!-- Replace with your actual image URL -->
                 <img src="https://via.placeholder.com/150" alt="Swapneel">
             </div>
 
             <div class="username">@swapneel</div>
-            <div class="tagline">আমাকে একটি বেনামী চিঠি পাঠান! 💌</div>
+            <div class="tagline">Amake ekti anonymous chithi pathan! 💌</div>
 
             <div class="message-box">
-                <textarea id="anonymousMsg" placeholder="এখানে আপনার গোপন কথাটি লিখুন..."></textarea>
+                <textarea id="anonymousMsg" placeholder="Ekhane apnar gopon kothati likhun..." maxlength="500" oninput="updateCount()"></textarea>
             </div>
+            <span class="char-count" id="charDisplay">0 / 500</span>
 
-            <button class="send-btn" onclick="sendChithi()" id="submitBtn">চিঠি পাঠান (Send)</button>
+            <button class="send-btn" onclick="sendChithi()" id="submitBtn">Chithi Pathan (Send)</button>
 
             <div id="status-msg"></div>
         </div>
@@ -197,8 +208,12 @@
     </div>
 
     <script>
-        // Render server endpoint URL
         const API_ENDPOINT = "https://anonymous-message-adit.onrender.com/get-data";
+
+        function updateCount() {
+            const len = document.getElementById('anonymousMsg').value.length;
+            document.getElementById('charDisplay').innerText = `${len} / 500`;
+        }
 
         async function sendChithi() {
             const inputField = document.getElementById('anonymousMsg');
@@ -208,57 +223,52 @@
             const message = inputField.value.trim();
 
             if (!message) {
-                status.innerText = "দয়া করে কিছু একটা লিখুন! 😊";
+                status.innerText = "Doya kore kichu likhun! 😊";
                 status.style.color = "#FF2E63";
                 return;
             }
 
-            // Update UI to show loading state
-            status.innerText = "চিঠি পাঠানো হচ্ছে...";
+            status.innerText = "Chithi pathano hocche... (Server suth-the somoy nite pare)";
             status.style.color = "#333";
             btn.classList.add('loading');
-            btn.innerText = "অপেক্ষা করুন...";
+            btn.innerText = "Sending...";
 
-            try {
-                // রেন্ডার সার্ভারকে কল করা হচ্ছে
-                const finalUrl = `${API_ENDPOINT}?message=${encodeURIComponent(message)}`;
-                
-                // Fetch request with a longer timeout possibility
-                const response = await fetch(finalUrl, {
-                    method: 'GET',
-                    headers: {
-                        'Accept': 'application/json'
+            const finalUrl = `${API_ENDPOINT}?message=${encodeURIComponent(message)}`;
+
+            // Implementation of a simple retry mechanism
+            const attemptFetch = async (retries) => {
+                try {
+                    const response = await fetch(finalUrl, {
+                        method: 'GET',
+                        mode: 'cors' // Ensuring CORS is handled
+                    });
+
+                    if (!response.ok) throw new Error("Server Error");
+
+                    const data = await response.json();
+                    if (data.status === "success" || data.message === "Saved in table format!") {
+                        successOverlay.style.display = "flex";
+                        inputField.value = ""; 
+                        status.innerText = "";
+                        updateCount();
+                    } else {
+                        throw new Error("Data not saved");
                     }
-                });
-
-                if (!response.ok) {
-                    throw new Error(`Server Error: ${response.status}`);
-                }
-
-                const data = await response.json();
-
-                if (data.status === "success" || data.message === "Saved in table format!") {
-                    successOverlay.style.display = "flex";
-                    inputField.value = ""; 
-                    status.innerText = "";
-                } else {
-                    status.innerText = "সার্ভার থেকে রেসপন্স পাওয়া যায়নি। ❌";
+                } catch (error) {
+                    if (retries > 0) {
+                        status.innerText = `Retry kora hocche... (${3 - retries + 1}/3)`;
+                        return await attemptFetch(retries - 1);
+                    }
+                    console.error("Fetch Error:", error);
+                    status.innerText = "Server Connection Error! Render ki Live ache? ❌";
                     status.style.color = "#dc3545";
+                } finally {
+                    btn.classList.remove('loading');
+                    btn.innerText = "Chithi Pathan (Send)";
                 }
-            } catch (error) {
-                console.error("Fetch error details:", error);
-                
-                // স্পেসিফিক মেসেজ দেখানো
-                if (error.name === 'TypeError') {
-                    status.innerText = "কানেকশন এরর! আপনার রেন্ডার সার্ভার কি অন আছে? (একটু পর আবার চেষ্টা করুন)";
-                } else {
-                    status.innerText = "সমস্যা: " + error.message;
-                }
-                status.style.color = "#dc3545";
-            } finally {
-                btn.classList.remove('loading');
-                btn.innerText = "চিঠি পাঠান (Send)";
-            }
+            };
+
+            await attemptFetch(3); // Try up to 3 times
         }
 
         function resetForm() {
