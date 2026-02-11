@@ -1,0 +1,48 @@
+/**
+ * Anonymous Message Handler for Google Docs
+ */
+
+function doPost(e) {
+  try {
+    // 1. Insert your Google Doc ID here
+    // ID can be found in the URL: docs.google.com/document/d/ID_HERE/edit
+    var docId = 'GOOGLE_DOCS_ID_HERE';  
+    var doc = DocumentApp.openById(docId);
+    var body = doc.getBody();
+    
+    // 2. Capture the message sent from the frontend
+    var message = e.parameter.message;
+    
+    // 3. Generate current timestamp
+    var now = new Date();
+    var timestamp = Utilities.formatDate(now, Session.getScriptTimeZone(), "MMM dd, yyyy - HH:mm:ss");
+
+    // 4. Append data to the Doc file with formatting
+    // Add a horizontal divider line
+    body.appendHorizontalRule();
+    
+    // Add Timestamp (Bold)
+    var timePara = body.appendParagraph("🕒 Sent at: " + timestamp);
+    timePara.setBold(true);
+    timePara.setFontSize(10);
+    timePara.setForegroundColor('#666666');
+
+    // Add the actual message
+    var msgPara = body.appendParagraph("💬 Message: " + message);
+    msgPara.setBold(false);
+    msgPara.setItalic(true);
+    msgPara.setFontSize(12);
+    msgPara.setSpacingBefore(5);
+
+    // 5. Ensure changes are saved and document is closed
+    doc.saveAndClose();
+
+    return ContentService.createTextOutput("Success")
+                         .setMimeType(ContentService.MimeType.TEXT);
+                         
+  } catch (error) {
+    // Return error message if something goes wrong
+    return ContentService.createTextOutput("Error: " + error.message)
+                         .setMimeType(ContentService.MimeType.TEXT);
+  }
+}
