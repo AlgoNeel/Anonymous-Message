@@ -11,7 +11,7 @@
         :root {
             --primary-gradient: linear-gradient(135deg, #FF9A8B 0%, #FF6A88 55%, #FF99AC 100%);
             --accent-color: #FF2E63;
-            --glass-bg: rgba(255, 255, 255, 0.9);
+            --glass-bg: rgba(255, 255, 255, 0.95);
         }
 
         * {
@@ -40,6 +40,7 @@
             box-shadow: 0 20px 40px rgba(0,0,0,0.15);
             text-align: center;
             position: relative;
+            overflow: hidden;
         }
 
         /* প্রোফাইল পিকচার সেকশন */
@@ -120,8 +121,26 @@
             background: #222;
         }
 
-        .send-btn:active {
-            transform: scale(0.98);
+        /* সাকসেস ওভারলে */
+        #success-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: white;
+            display: none;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 10;
+            padding: 20px;
+            border-radius: 40px;
+        }
+
+        .success-icon {
+            font-size: 50px;
+            margin-bottom: 15px;
         }
 
         /* স্ট্যাটাস মেসেজ */
@@ -140,7 +159,6 @@
             letter-spacing: 1px;
         }
 
-        /* লোডিং এনিমেশন */
         .loading {
             opacity: 0.6;
             pointer-events: none;
@@ -150,70 +168,102 @@
 <body>
 
     <div class="chithi-card">
-        <!-- প্রোফাইল ছবি (আপনার ছবি এখানে লিঙ্ক করুন) -->
-        <div class="avatar-container">
-            <img src="https://via.placeholder.com/150" alt="Swapneel">
+        <!-- সাকসেস মেসেজ স্ক্রিন -->
+        <div id="success-overlay">
+            <div class="success-icon">✅</div>
+            <h2 style="color: #333; margin-bottom: 10px;">চিঠি পাঠানো হয়েছে!</h2>
+            <p style="color: #666; margin-bottom: 20px;">আপনার বেনামী চিঠিটি সফলভাবে পৌঁছে গেছে।</p>
+            <button class="send-btn" onclick="resetForm()" style="width: auto; padding: 12px 30px; font-size: 14px;">আরও একটি পাঠান</button>
         </div>
 
-        <div class="username">@swapneel</div>
-        <div class="tagline">আমাকে একটি বেনামী চিঠি পাঠান! 💌</div>
+        <div id="main-content">
+            <div class="avatar-container">
+                <img src="https://via.placeholder.com/150" alt="Swapneel">
+            </div>
 
-        <div class="message-box">
-            <textarea id="anonymousMsg" placeholder="এখানে আপনার গোপন কথাটি লিখুন..."></textarea>
+            <div class="username">@swapneel</div>
+            <div class="tagline">আমাকে একটি বেনামী চিঠি পাঠান! 💌</div>
+
+            <div class="message-box">
+                <textarea id="anonymousMsg" placeholder="এখানে আপনার গোপন কথাটি লিখুন..."></textarea>
+            </div>
+
+            <button class="send-btn" onclick="sendChithi()" id="submitBtn">চিঠি পাঠান (Send)</button>
+
+            <div id="status-msg"></div>
         </div>
-
-        <button class="send-btn" onclick="sendChithi()" id="submitBtn">চিঠি পাঠান (Send)</button>
-
-        <div id="status-msg"></div>
 
         <div class="footer-text">Powered by Swapneel Proxy</div>
     </div>
 
     <script>
-        // আপনার রেন্ডার সার্ভার লিঙ্ক
+        // Render server endpoint URL
         const API_ENDPOINT = "https://anonymous-message-adit.onrender.com/get-data";
 
         async function sendChithi() {
             const inputField = document.getElementById('anonymousMsg');
             const status = document.getElementById('status-msg');
             const btn = document.getElementById('submitBtn');
+            const successOverlay = document.getElementById('success-overlay');
             const message = inputField.value.trim();
 
-            // ভ্যালিডেশন
             if (!message) {
                 status.innerText = "দয়া করে কিছু একটা লিখুন! 😊";
                 status.style.color = "#FF2E63";
                 return;
             }
 
-            // লোডিং স্টেট শুরু
-            status.innerText = "আপনার চিঠি পাঠানো হচ্ছে...";
+            // Update UI to show loading state
+            status.innerText = "চিঠি পাঠানো হচ্ছে...";
             status.style.color = "#333";
             btn.classList.add('loading');
             btn.innerText = "অপেক্ষা করুন...";
 
             try {
-                // রেন্ডার সার্ভারে মেসেজটি পাঠানো হচ্ছে
-                const response = await fetch(`${API_ENDPOINT}?message=${encodeURIComponent(message)}`);
+                // রেন্ডার সার্ভারকে কল করা হচ্ছে
+                const finalUrl = `${API_ENDPOINT}?message=${encodeURIComponent(message)}`;
+                
+                // Fetch request with a longer timeout possibility
+                const response = await fetch(finalUrl, {
+                    method: 'GET',
+                    headers: {
+                        'Accept': 'application/json'
+                    }
+                });
+
+                if (!response.ok) {
+                    throw new Error(`Server Error: ${response.status}`);
+                }
+
                 const data = await response.json();
 
-                if (data.status === "success") {
-                    status.innerText = "চিঠিটি সফলভাবে গুগল ডকসে জমা হয়েছে! ✅";
-                    status.style.color = "#28a745";
-                    inputField.value = ""; // বক্স ক্লিয়ার করা
+                if (data.status === "success" || data.message === "Saved in table format!") {
+                    successOverlay.style.display = "flex";
+                    inputField.value = ""; 
+                    status.innerText = "";
                 } else {
-                    status.innerText = "অ্যাক্সেস ডিনাইড! ডোমেইন চেক করুন। ❌";
+                    status.innerText = "সার্ভার থেকে রেসপন্স পাওয়া যায়নি। ❌";
                     status.style.color = "#dc3545";
                 }
             } catch (error) {
-                console.error("Error:", error);
-                status.innerText = "সার্ভারের সাথে কানেক্ট করা যায়নি। ❌";
+                console.error("Fetch error details:", error);
+                
+                // স্পেসিফিক মেসেজ দেখানো
+                if (error.name === 'TypeError') {
+                    status.innerText = "কানেকশন এরর! আপনার রেন্ডার সার্ভার কি অন আছে? (একটু পর আবার চেষ্টা করুন)";
+                } else {
+                    status.innerText = "সমস্যা: " + error.message;
+                }
                 status.style.color = "#dc3545";
             } finally {
-                // লোডিং স্টেট শেষ
                 btn.classList.remove('loading');
                 btn.innerText = "চিঠি পাঠান (Send)";
             }
+        }
+
+        function resetForm() {
+            document.getElementById('success-overlay').style.display = "none";
+            document.getElementById('anonymousMsg').focus();
         }
     </script>
 </body>
