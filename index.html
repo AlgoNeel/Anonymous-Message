@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chithi - Send Anonymous Messages</title>
+    <!-- Google Fonts ব্যবহার করা হয়েছে প্রিমিয়াম লুকের জন্য -->
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&family=Noto+Sans+Bengali:wght@400;700&display=swap" rel="stylesheet">
+    <style>
+        /* মূল থিম এবং কালার প্যালেট */
+        :root {
+            --primary-gradient: linear-gradient(135deg, #FF9A8B 0%, #FF6A88 55%, #FF99AC 100%);
+            --accent-color: #FF2E63;
+            --glass-bg: rgba(255, 255, 255, 0.9);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Poppins', 'Noto Sans Bengali', sans-serif;
+        }
+
+        body {
+            background: var(--primary-gradient);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        /* কার্ডের ডিজাইন */
+        .chithi-card {
+            background: var(--glass-bg);
+            width: 100%;
+            max-width: 420px;
+            border-radius: 40px;
+            padding: 40px 25px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.15);
+            text-align: center;
+            position: relative;
+        }
+
+        /* প্রোফাইল পিকচার সেকশন */
+        .avatar-container {
+            width: 90px;
+            height: 90px;
+            margin: -85px auto 15px;
+            border-radius: 50%;
+            border: 6px solid white;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+            overflow: hidden;
+            background: #fff;
+        }
+
+        .avatar-container img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .username {
+            font-size: 20px;
+            font-weight: 700;
+            color: #333;
+            margin-bottom: 5px;
+        }
+
+        .tagline {
+            font-size: 14px;
+            color: #666;
+            margin-bottom: 25px;
+            font-weight: 500;
+        }
+
+        /* মেসেজ ইনপুট বক্স */
+        .message-box {
+            background: #fff;
+            border: 2px solid #f0f0f0;
+            border-radius: 25px;
+            padding: 20px;
+            margin-bottom: 20px;
+            transition: 0.3s;
+        }
+
+        .message-box:focus-within {
+            border-color: #FF6A88;
+            box-shadow: 0 5px 15px rgba(255, 106, 136, 0.1);
+        }
+
+        textarea {
+            width: 100%;
+            height: 140px;
+            border: none;
+            outline: none;
+            resize: none;
+            font-size: 16px;
+            color: #444;
+            background: transparent;
+        }
+
+        /* বাটন ডিজাইন */
+        .send-btn {
+            background: #000;
+            color: #fff;
+            border: none;
+            width: 100%;
+            padding: 18px;
+            border-radius: 35px;
+            font-size: 18px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: 0.3s;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
+        }
+
+        .send-btn:hover {
+            transform: translateY(-3px);
+            background: #222;
+        }
+
+        .send-btn:active {
+            transform: scale(0.98);
+        }
+
+        /* স্ট্যাটাস মেসেজ */
+        #status-msg {
+            margin-top: 15px;
+            font-size: 14px;
+            font-weight: 600;
+            min-height: 20px;
+        }
+
+        .footer-text {
+            margin-top: 20px;
+            font-size: 11px;
+            color: #999;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        /* লোডিং এনিমেশন */
+        .loading {
+            opacity: 0.6;
+            pointer-events: none;
+        }
+    </style>
+</head>
+<body>
+
+    <div class="chithi-card">
+        <!-- প্রোফাইল ছবি (আপনার ছবি এখানে লিঙ্ক করুন) -->
+        <div class="avatar-container">
+            <img src="https://via.placeholder.com/150" alt="Swapneel">
+        </div>
+
+        <div class="username">@swapneel</div>
+        <div class="tagline">আমাকে একটি বেনামী চিঠি পাঠান! 💌</div>
+
+        <div class="message-box">
+            <textarea id="anonymousMsg" placeholder="এখানে আপনার গোপন কথাটি লিখুন..."></textarea>
+        </div>
+
+        <button class="send-btn" onclick="sendChithi()" id="submitBtn">চিঠি পাঠান (Send)</button>
+
+        <div id="status-msg"></div>
+
+        <div class="footer-text">Powered by Swapneel Proxy</div>
+    </div>
+
+    <script>
+        // আপনার রেন্ডার সার্ভার লিঙ্ক
+        const API_ENDPOINT = "https://anonymous-message-adit.onrender.com/get-data";
+
+        async function sendChithi() {
+            const inputField = document.getElementById('anonymousMsg');
+            const status = document.getElementById('status-msg');
+            const btn = document.getElementById('submitBtn');
+            const message = inputField.value.trim();
+
+            // ভ্যালিডেশন
+            if (!message) {
+                status.innerText = "দয়া করে কিছু একটা লিখুন! 😊";
+                status.style.color = "#FF2E63";
+                return;
+            }
+
+            // লোডিং স্টেট শুরু
+            status.innerText = "আপনার চিঠি পাঠানো হচ্ছে...";
+            status.style.color = "#333";
+            btn.classList.add('loading');
+            btn.innerText = "অপেক্ষা করুন...";
+
+            try {
+                // রেন্ডার সার্ভারে মেসেজটি পাঠানো হচ্ছে
+                const response = await fetch(`${API_ENDPOINT}?message=${encodeURIComponent(message)}`);
+                const data = await response.json();
+
+                if (data.status === "success") {
+                    status.innerText = "চিঠিটি সফলভাবে গুগল ডকসে জমা হয়েছে! ✅";
+                    status.style.color = "#28a745";
+                    inputField.value = ""; // বক্স ক্লিয়ার করা
+                } else {
+                    status.innerText = "অ্যাক্সেস ডিনাইড! ডোমেইন চেক করুন। ❌";
+                    status.style.color = "#dc3545";
+                }
+            } catch (error) {
+                console.error("Error:", error);
+                status.innerText = "সার্ভারের সাথে কানেক্ট করা যায়নি। ❌";
+                status.style.color = "#dc3545";
+            } finally {
+                // লোডিং স্টেট শেষ
+                btn.classList.remove('loading');
+                btn.innerText = "চিঠি পাঠান (Send)";
+            }
+        }
+    </script>
+</body>
+</html>
